@@ -58,7 +58,7 @@ def strip_brands(text: str) -> str:
 
     Вырезание выполняется по словам (word boundary), чтобы не портить
     служебные фразы вроде "no logo" или "unbranded". Слово "logo"/"brand"
-    удаляется только если оно НЕ предваряется частицей "no"/"un".
+    удаляется только если оно НЕ предваряется частицей "no "/"un".
     """
     import re
 
@@ -68,17 +68,22 @@ def strip_brands(text: str) -> str:
 
     for brand in BLOCKED_BRANDS:
         if brand in ("logo", "brand", "trademark"):
-            # Оставляем "no logo" / "no text" / "unbranded" нетронутыми
-            pat = r"(?<!\bno\s)(?<!\bun)" + _pattern(brand)
+            # Оставляем "no logo" / "no text" / "unbranded" нетронутыми.
+            # \b внутри lookbehind в Python re работает нестабильно —
+            # используем простые строковые lookbehinds.
+            pat = r"(?<!no )(?<!un)" + _pattern(brand)
         else:
             pat = _pattern(brand)
         text = re.sub(pat, "", text, flags=re.IGNORECASE)
 
-    # Схлопываем мусор, оставшийся после вырезания
-    text = re.sub(r"\s+,", ",", text)
-    text = re.sub(r",{2,}", ",", text)
-    text = re.sub(r"\s{2,}", " ", text)
-    return text.strip().strip(",").strip()
+    # Финальная чистка артефактов после вырезания: ", ,", "  ", висячие запятые
+    text = re.sub(r"\s+,", ",", text)       # пробел перед запятой
+    text = re.sub(r",\s*,", ",", text)      # двойные запятые (с пробелами)
+    text = re.sub(r",{2,}", ",", text)      # двойные запятые без пробелов
+    text = re.sub(r",\s*$", "", text)       # запятая в конце
+    text = re.sub(r"^\s*,\s*", "", text)    # запятая в начале
+    text = re.sub(r"\s{2,}", " ", text)     # двойные пробелы
+    return text.strip()
 
 
 def default_current_year() -> int:

@@ -238,13 +238,15 @@ class Win98TitleBar(QFrame):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(4, 2, 2, 2)
         lay.setSpacing(2)
-        label = QLabel("\U0001F457  " + title)
+        # Без эмодзи: Win98-эстетика допускает только ASCII/стандартные глифы.
+        label = QLabel(title)
         lay.addWidget(label)
         lay.addStretch(1)
-        for ch in ("_", "\u25A1", "\u2715"):
+        # Кнопки окна — ASCII-арт: [_] [ ] [x] (квадрат рисуем глифом "o")
+        for ch in ("_", "[o]", "x"):
             btn = QPushButton(ch)
             btn.setFixedSize(18, 16)
-            if ch == "\u2715":
+            if ch == "x":
                 btn.clicked.connect(lambda: self.window().close())
             elif ch == "_":
                 btn.clicked.connect(lambda: self.window().showMinimized())
@@ -431,15 +433,20 @@ class MainWindow(QMainWindow):
     def on_generate(self):
         self._play_click()
         self.status("Generating...")
-        QApplication.changeOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         self.btn_generate.setEnabled(False)
         # Небольшая ретро-задержка "как на пеньке 133 МГц"
         QTimer.singleShot(350, self._do_generate)
 
     def _do_generate(self):
+        category = self.cb_category.currentText()
+        item_name = self.cb_item.currentText()
+        if not category or not item_name:
+            self.status("Select category and item first.")
+            self._finish_generation()
+            return
         try:
-            item = make_item(self.cb_category.currentText(),
-                             self.cb_item.currentText())
+            item = make_item(category, item_name)
         except ValueError:
             self.status("No item selected!")
             self._finish_generation()

@@ -20,6 +20,15 @@ class Style(Enum):
     RETRO = "retro"
 
 
+# Реестр категорий одежды. Данные нормализованы: без висячих пробелов
+# ни в ключах, ни в значениях (склейка выполняется через ", ".join).
+CATEGORY_REGISTRY = {
+    "Top": ["T-Shirt", "Blouse", "Sweater"],
+    "Bottom": ["Jeans", "Skirt", "Trousers"],
+    "Shoes": ["Sneakers", "Boots", "Loafers"],
+}
+
+
 @dataclass
 class PromptSettings:
     """Настройки одного промпта."""

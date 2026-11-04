@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+import re
 from typing import List
 
-from models import GenerationResult, PromptSettings, Style
+from models import CATEGORY_REGISTRY, GenerationResult, PromptSettings, Style
 
 # Префиксы стилей, добавляемые к системному промпту.
 STYLE_PREFIXES = {
@@ -16,6 +17,32 @@ STYLE_PREFIXES = {
     Style.MODERN: "Ты — современный ассистент.",
     Style.RETRO: "Ты — ретро-ассистент в стиле Windows 98.",
 }
+
+# Заблокированные бренды. Строки нормализованы: без висячих пробелов —
+# strip_brands() работает с re.escape и \b, пробелы ей не нужны.
+BLOCKED_BRANDS = [
+    "nike",
+    "adidas",
+    "gucci",
+    "prada",
+    "chanel",
+    "logo",
+]
+
+# Ключевые слова для автоматического обогащения промпта.
+AUTO_KEYWORDS = [
+    "high quality",
+    "detailed",
+    "realistic lighting",
+]
+
+# Базовый негативный промпт.
+BASE_NEGATIVE = [
+    "blurry",
+    "watermark",
+    "text",
+    "lowres",
+]
 
 
 class PromptEngine:
@@ -48,3 +75,31 @@ class PromptEngine:
     def with_settings(self, settings: PromptSettings) -> "PromptEngine":
         """Возвращает новый движок с переданными настройками."""
         return PromptEngine(settings=settings)
+
+    @staticmethod
+    def strip_brands(text: str) -> str:
+        """Удаляет заблокированные бренды из текста.
+
+        Логика не менялась: re.escape + \b — границам слова висячие
+        пробелы в данных не нужны.
+        """
+        for brand in BLOCKED_BRANDS:
+            text = re.sub(rf"\b{re.escape(brand)}\b", "", text, flags=re.IGNORECASE)
+        return re.sub(r"\s+", " ", text).strip()
+
+    def build_prompts(self) -> List[str]:
+        """Собирает список сегментов промпта.
+
+        Склеивание через ", ".join(parts): разделительный пробел
+        добавляется автоматически, поэтому данные хранятся без
+        висячих пробелов.
+        """
+        parts: List[str] = []
+        for items in CATEGORY_REGISTRY.values():
+            parts.extend(items)
+        parts.extend(AUTO_KEYWORDS)
+        return parts
+
+    def build_negative(self) -> str:
+        """Формирует негативный промпт из BASE_NEGATIVE."""
+        return ", ".join(BASE_NEGATIVE)
